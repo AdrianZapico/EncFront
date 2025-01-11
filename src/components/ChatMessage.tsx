@@ -26,7 +26,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <MessageCircle className="w-4 h-4" />
-            <span className="font-semibold text-sm">{username}</span>
+            <span className="font-semibold text-sm">{username}</span> {/* Exibindo username */}
           </div>
           <p className="text-sm break-words break-all whitespace-pre-wrap">{message}</p>
           <span className="text-xs opacity-75 mt-1 block">

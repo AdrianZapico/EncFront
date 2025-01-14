@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useContacts } from '../context/ContactContext';
-import AddContact from '../components/AddContact';
+
 import { Check, X } from 'lucide-react';
 
 interface ChatListProps {
@@ -104,7 +104,7 @@ const ChatList: React.FC<ChatListProps> = ({
           );
         })}
       </div>
-      <AddContact />
+     
     </div>
   );
 };

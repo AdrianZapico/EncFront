@@ -1,162 +1,99 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 import { useAuth } from './AuthContext';
 
-export interface Contact {
+interface User {
   _id: string;
-  userId: {
-    username: string;
-    userTag: string;
-  };
-  contactId: {
-    username: string;
-    userTag: string;
-  };
-  status: 'pending' | 'accepted' | 'blocked';
-  nickname: string | null;
-  createdAt: string;
-  updatedAt: string;
+  username: string;
+  userTag: string;
 }
 
-interface ContactContextType {
+interface Contact {
+  _id: string;
+  userId: User;
+  contactId: User;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+interface ContactRequest {
+  _id: string;
+  from: User;
+  to: User;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+interface ContactContextData {
   contacts: Contact[];
-  pendingRequests: Contact[];
+  pendingRequests: ContactRequest[];
   sendContactRequest: (userTag: string) => Promise<void>;
   acceptContactRequest: (requestId: string) => Promise<void>;
   rejectContactRequest: (requestId: string) => Promise<void>;
-  blockContact: (contactId: string) => Promise<void>;
-  refreshContacts: () => Promise<void>;
 }
 
-const ContactContext = createContext<ContactContextType | undefined>(undefined);
+const ContactContext = createContext<ContactContextData>({} as ContactContextData);
 
 export const ContactProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<Contact[]>([]);
-
-  const fetchContacts = async () => {
-    if (!user) return;
-
-    try {
-      const response = await fetch('http://localhost:5000/contacts', {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Erro ao buscar contatos');
-
-      const data = await response.json();
-      setContacts(data);
-    } catch (error) {
-      console.error('Erro ao buscar contatos:', error);
-    }
-  };
-
-  const fetchPendingRequests = async () => {
-    if (!user) return;
-
-    try {
-      const response = await fetch('http://localhost:5000/contacts/pending', {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Erro ao buscar solicitações pendentes');
-
-      const data = await response.json();
-      setPendingRequests(data);
-    } catch (error) {
-      console.error('Erro ao buscar solicitações pendentes:', error);
-    }
-  };
-
-  const refreshContacts = async () => {
-    await Promise.all([fetchContacts(), fetchPendingRequests()]);
-  };
+  const [pendingRequests, setPendingRequests] = useState<ContactRequest[]>([]);
 
   useEffect(() => {
     if (user) {
-      refreshContacts();
-    } else {
-      setContacts([]);
-      setPendingRequests([]);
+      loadContacts();
+      loadPendingRequests();
     }
   }, [user]);
 
-  const sendContactRequest = async (userTag: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const response = await fetch('http://localhost:5000/contacts/request', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.token}`,
-      },
-      body: JSON.stringify({ userTag }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Erro ao enviar solicitação de contato');
+  const loadContacts = async () => {
+    try {
+      const response = await api.get<Contact[]>('/contacts');
+      setContacts(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar contatos:', error);
+      setContacts([]);
     }
+  };
 
-    await refreshContacts();
+  const loadPendingRequests = async () => {
+    try {
+      const response = await api.get<ContactRequest[]>('/contacts/requests/pending');
+      setPendingRequests(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar solicitações pendentes:', error);
+      setPendingRequests([]);
+    }
+  };
+
+  const sendContactRequest = async (userTag: string) => {
+    try {
+      await api.post('/contacts/request', { userTag });
+      await loadContacts();
+      await loadPendingRequests();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error('Erro ao enviar solicitação de contato');
+    }
   };
 
   const acceptContactRequest = async (requestId: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const response = await fetch(`http://localhost:5000/contacts/accept/${requestId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${user.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Erro ao aceitar solicitação');
+    try {
+      await api.post(`/contacts/request/${requestId}/accept`);
+      await loadContacts();
+      await loadPendingRequests();
+    } catch (error) {
+      console.error('Erro ao aceitar solicitação:', error);
     }
-
-    await refreshContacts();
   };
 
   const rejectContactRequest = async (requestId: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const response = await fetch(`http://localhost:5000/contacts/reject/${requestId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${user.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Erro ao rejeitar solicitação');
+    try {
+      await api.post(`/contacts/request/${requestId}/reject`);
+      await loadPendingRequests();
+    } catch (error) {
+      console.error('Erro ao rejeitar solicitação:', error);
     }
-
-    await refreshContacts();
-  };
-
-  const blockContact = async (contactId: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const response = await fetch(`http://localhost:5000/contacts/block/${contactId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${user.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Erro ao bloquear contato');
-    }
-
-    await refreshContacts();
   };
 
   return (
@@ -167,8 +104,6 @@ export const ContactProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sendContactRequest,
         acceptContactRequest,
         rejectContactRequest,
-        blockContact,
-        refreshContacts,
       }}
     >
       {children}
@@ -178,8 +113,8 @@ export const ContactProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 export const useContacts = () => {
   const context = useContext(ContactContext);
-  if (context === undefined) {
-    throw new Error('useContacts deve ser usado dentro de um ContactProvider');
+  if (!context) {
+    throw new Error('useContacts must be used within a ContactProvider');
   }
   return context;
 }; 

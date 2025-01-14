@@ -5,10 +5,7 @@ import MessageInput from './MessageInput';
 import UserList from './UserList';
 import { encryptMessage, decryptMessage } from '../utils/encryption';
 import { Lock } from 'lucide-react';
-
-interface ChatRoomProps {
-  username: string;
-}
+import { useAuth } from '../context/AuthContext';
 
 interface Message {
   username: string;
@@ -16,19 +13,20 @@ interface Message {
   timestamp: string;
 }
 
-const ChatRoom: React.FC<ChatRoomProps> = ({ username }) => {
+const ChatRoom: React.FC = () => {
+  const { user } = useAuth();
   const socket = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !user) return;
 
     // Verificar e enviar username correto
-    if (username) {
-      console.log(`Enviando username: ${username}`); // Log para verificação
-      socket.emit('join', username);
+    if (user.username) {
+      console.log(`Enviando username: ${user.username}`);
+      socket.emit('join', user.username);
     }
 
     socket.on('message', (data: Message) => {
@@ -40,12 +38,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ username }) => {
     });
 
     socket.on('userJoined', ({ users }) => {
-      console.log('Usuários online:', users); // Log para verificação
+      console.log('Usuários online:', users);
       setUsers(users);
     });
 
     socket.on('userLeft', ({ users }) => {
-      console.log('Usuário saiu:', users); // Log para verificação
+      console.log('Usuário saiu:', users);
       setUsers(users);
     });
 
@@ -54,35 +52,45 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ username }) => {
       socket.off('userJoined');
       socket.off('userLeft');
     };
-  }, [socket, username]);
+  }, [socket, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSendMessage = (message: string) => {
-    if (socket) {
+    if (socket && user) {
       const encryptedMessage = encryptMessage(message);
-      socket.emit('message', { username, message: encryptedMessage });
+      socket.emit('message', { username: user.username, message: encryptedMessage });
     }
   };
 
+  if (!user) return null;
+
   return (
-    <div className="max-w-6xl mx-auto flex gap-4">
-      <div className="flex-1 bg-white rounded-lg shadow-md p-4">
-        <div className="flex items-center gap-2 mb-6">
-          <Lock className="w-6 h-6 text-blue-500" />
-          <h1 className="text-2xl font-bold">Encrypted Chat</h1>
+    <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 p-4">
+      <div className="md:hidden">
+        <UserList users={users} />
+      </div>
+
+      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Lock className="w-6 h-6 text-blue-500" />
+            <h1 className="text-xl md:text-2xl font-bold dark:text-white">
+              Encrypted Chat
+            </h1>
+          </div>
         </div>
         
-        <div className="h-[calc(100vh-250px)] overflow-y-auto mb-4">
+        <div className="h-[calc(100vh-250px)] md:h-[calc(100vh-200px)] overflow-y-auto mb-4">
           {messages.map((msg, index) => (
             <ChatMessage
               key={index}
               username={msg.username}
               message={msg.message}
               timestamp={msg.timestamp}
-              isCurrentUser={msg.username === username}
+              isCurrentUser={msg.username === user.username}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -91,7 +99,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ username }) => {
         <MessageInput onSendMessage={handleSendMessage} />
       </div>
       
-      <UserList users={users} />
+      <div className="hidden md:block">
+        <UserList users={users} />
+      </div>
     </div>
   );
 };

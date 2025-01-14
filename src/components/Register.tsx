@@ -1,83 +1,108 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Shield } from 'lucide-react';
 
-interface RegisterProps {
-  onToggleForm: () => void;
-}
-
-const Register: React.FC<RegisterProps> = ({ onToggleForm }) => {
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const Register: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const navigate = useNavigate();
+  const { register } = useAuth();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const response = await fetch('http://localhost:5000/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name, username, password, email })
-    });
-    const data = await response.json();
+    setIsLoading(true);
+    setError('');
 
-    if (response.ok) { // Usando response.ok para verificar se a resposta foi bem-sucedida
-      alert('Registro bem-sucedido! Redirecionando para o login.');
-      onToggleForm(); // Redirecionando para a página de login
-    } else {
-      alert(`Falha no registro: ${data.message}`);
+    try {
+      await register(email, password, username);
+      navigate('/app/chat');
+    } catch (err) {
+      setError('Falha no registro. Tente novamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-4">Register</h1>
-        <form onSubmit={handleRegister}>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-            className="w-full p-2 border rounded-lg mb-4"
-            required
-          />
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            className="w-full p-2 border rounded-lg mb-4"
-            required
-          />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="w-full p-2 border rounded-lg mb-4"
-            required
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full p-2 border rounded-lg mb-4"
-            required
-          />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+        <div className="flex justify-center mb-8">
+          <Shield className="w-12 h-12 text-blue-500" />
+        </div>
+        
+        <h2 className="text-3xl font-bold text-center mb-8 dark:text-white">Registro</h2>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Senha
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+            disabled={isLoading}
           >
-            Register
+            {isLoading ? 'Registrando...' : 'Registrar'}
           </button>
         </form>
-        <p className="mt-4 text-center">
-          Já possui registro?{' '}
-          <a href="#" className="text-blue-500 hover:underline" onClick={onToggleForm}>
-            Logue aqui
-          </a>
+
+        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
+          Já tem uma conta?{' '}
+          <Link
+            to="/auth/login"
+            className="text-blue-500 hover:underline"
+          >
+            Faça login
+          </Link>
         </p>
       </div>
     </div>

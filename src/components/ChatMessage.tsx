@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MoreVertical, Edit2, Trash2, X, Check } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from './ConfirmDialog';
 
 interface ChatMessageProps {
@@ -28,7 +27,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [editedMessage, setEditedMessage] = useState(message);
   const [showOptions, setShowOptions] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const { user } = useAuth();
 
   const handleEdit = () => {
     if (editedMessage.trim() !== message) {

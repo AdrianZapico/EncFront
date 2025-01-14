@@ -1,172 +1,141 @@
 // context/AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface User {
   username: string;
   token: string;
-}
-
-interface UpdateProfileData {
-  username?: string;
+  userTag: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, username: string) => Promise<void>;
   logout: () => void;
-  register: (email: string, password: string, username: string) => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
+  updateProfile: (data: { username: string }) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    try {
-      const savedUser = localStorage.getItem('user');
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      console.error('Erro ao carregar usuário do localStorage:', error);
-      localStorage.removeItem('user');
-      return null;
-    }
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  useEffect(() => {
-    try {
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-      } else {
-        localStorage.removeItem('user');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar usuário no localStorage:', error);
-    }
-  }, [user]);
-
   const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('http://localhost:5000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    const response = await fetch('http://localhost:5000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
+    if (!response.ok) {
       const data = await response.json();
-      const userData: User = {
-        username: data.username,
-        token: data.token
-      };
-      setUser(userData);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      throw new Error(data.message || 'Erro ao fazer login');
     }
+
+    const data = await response.json();
+    const userData = {
+      username: data.username,
+      token: data.token,
+      userTag: data.userTag
+    };
+    
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const register = async (email: string, password: string, username: string) => {
-    try {
-      const response = await fetch('http://localhost:5000/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          password, 
-          username,
-          name: username
-        }),
-      });
+  const register = async (name: string, email: string, password: string, username: string) => {
+    const response = await fetch('http://localhost:5000/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email, password, username }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
-      }
-
+    if (!response.ok) {
       const data = await response.json();
-      const userData: User = {
-        username: data.username,
-        token: data.token
-      };
-      setUser(userData);
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+      throw new Error(data.message || 'Erro ao registrar');
     }
+
+    const data = await response.json();
+    const userData = {
+      username: data.username,
+      token: data.token,
+      userTag: data.userTag
+    };
+    
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const logout = () => {
-    try {
-      setUser(null);
-      localStorage.removeItem('user');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    setUser(null);
+    localStorage.removeItem('user');
   };
 
-  const updateProfile = async (data: UpdateProfileData) => {
-    try {
-      const response = await fetch('http://localhost:5000/user/username', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify({ username: data.username })
-      });
+  const updateProfile = async (data: { username: string }) => {
+    if (!user) throw new Error('Usuário não autenticado');
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao atualizar perfil');
-      }
+    const response = await fetch('http://localhost:5000/user/username', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token}`,
+      },
+      body: JSON.stringify(data),
+    });
 
-      const updatedData = await response.json();
-      setUser(prev => prev ? { ...prev, username: updatedData.username } : null);
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      throw error;
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Erro ao atualizar perfil');
     }
+
+    const responseData = await response.json();
+    const updatedUser = {
+      ...user,
+      username: responseData.username,
+      userTag: responseData.userTag
+    };
+    
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const deleteAccount = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/user', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        }
-      });
+    if (!user) throw new Error('Usuário não autenticado');
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao excluir conta');
-      }
+    const response = await fetch('http://localhost:5000/user', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${user.token}`,
+      },
+    });
 
-      setUser(null);
-      localStorage.removeItem('user');
-    } catch (error) {
-      console.error('Erro ao excluir conta:', error);
-      throw error;
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Erro ao deletar conta');
     }
+
+    logout();
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      logout,
-      register,
-      updateProfile,
-      deleteAccount
-    }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };

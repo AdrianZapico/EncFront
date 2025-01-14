@@ -4,36 +4,50 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import ChatRoom from './components/ChatRoom';
-import AuthLayout from './components/AuthLayout';
 import Settings from './components/Settings';
+import AppLayout from './components/AppLayout';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
+import './styles/global.css';
+
+// Componente para proteger rotas
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" />;
+  return <AppLayout>{children}</AppLayout>;
+};
+
+const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      {/* Rotas públicas */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* Rotas protegidas */}
+      <Route path="/chat" element={
+        <ProtectedRoute>
+          <ChatRoom />
+        </ProtectedRoute>
+      } />
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
+
+      {/* Rota de fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Rotas públicas */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Navigate to="/auth/login" />} />
-          <Route path="/register" element={<Navigate to="/auth/register" />} />
-
-          {/* Rotas de autenticação */}
-          <Route path="/auth">
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
-          </Route>
-
-          {/* Rotas protegidas */}
-          <Route path="/app" element={<AuthLayout />}>
-            <Route path="chat" element={<ChatRoom />} />
-            <Route path="settings" element={<Settings />} />
-            <Route index element={<Navigate to="chat" replace />} />
-          </Route>
-
-          {/* Rota de fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   );

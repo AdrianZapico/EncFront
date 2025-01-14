@@ -3,6 +3,7 @@ import { User, Shield, Bell, Moon, Sun, Smartphone, Key, Globe, Trash } from 'lu
 import { useAuth } from '../context/AuthContext';
 import ThemeButton from './ThemeButton';
 import { useNavigate } from 'react-router-dom';
+import ConfirmDialog from './ConfirmDialog';
 
 interface NotificationSettings {
   messages: boolean;
@@ -22,6 +23,7 @@ const Settings: React.FC = () => {
   });
   const [language, setLanguage] = useState('pt-BR');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleUpdateProfile = async () => {
     setIsLoading(true);
@@ -36,16 +38,15 @@ const Settings: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      'Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.'
-    );
-    if (confirmed) {
-      try {
-        await deleteAccount();
-        navigate('/');
-      } catch (error) {
-        console.error('Erro ao excluir conta:', error);
-      }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+      navigate('/');
+    } catch (error) {
+      console.error('Erro ao excluir conta:', error);
     }
   };
 
@@ -215,6 +216,14 @@ const Settings: React.FC = () => {
           Excluir Conta
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDeleteAccount}
+        title="Excluir conta"
+        message="Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita e todos os seus dados serão perdidos permanentemente."
+      />
     </div>
   );
 };

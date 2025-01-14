@@ -35,10 +35,22 @@ const ChatRoom: React.FC = () => {
     socket.on('message', (data: Message) => {
       const decryptedMessage = {
         ...data,
-        id: Math.random().toString(36).substr(2, 9),
         message: decryptMessage(data.message)
       };
       setMessages(prev => [...prev, decryptedMessage]);
+    });
+
+    socket.on('messageEdited', (data: { id: string; newMessage: string }) => {
+      const decryptedMessage = decryptMessage(data.newMessage);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === data.id ? { ...msg, message: decryptedMessage } : msg
+        )
+      );
+    });
+
+    socket.on('messageDeleted', (messageId: string) => {
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
     });
 
     socket.on('userJoined', ({ users }) => {
@@ -56,6 +68,8 @@ const ChatRoom: React.FC = () => {
 
     return () => {
       socket.off('message');
+      socket.off('messageEdited');
+      socket.off('messageDeleted');
       socket.off('userJoined');
       socket.off('userLeft');
       socket.off('error');
@@ -81,7 +95,10 @@ const ChatRoom: React.FC = () => {
     }
 
     const encryptedMessage = encryptMessage(message);
+    const messageId = Math.random().toString(36).substr(2, 9);
+    
     socket.emit('message', {
+      id: messageId,
       username: user.username,
       message: encryptedMessage,
       timestamp: new Date().toISOString()
@@ -94,15 +111,15 @@ const ChatRoom: React.FC = () => {
   };
 
   const handleEditMessage = (id: string, newMessage: string) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === id ? { ...msg, message: newMessage } : msg
-      )
-    );
+    if (!socket || !user) return;
+    
+    const encryptedMessage = encryptMessage(newMessage);
+    socket.emit('editMessage', { id, newMessage: encryptedMessage });
   };
 
   const handleDeleteMessage = (id: string) => {
-    setMessages(prev => prev.filter(msg => msg.id !== id));
+    if (!socket || !user) return;
+    socket.emit('deleteMessage', id);
   };
 
   if (!user) return null;
@@ -116,7 +133,7 @@ const ChatRoom: React.FC = () => {
       <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <Lock className="w-6 h-6 text-indigo-600" />
+            <Lock className="w-6 h-6 text-blue-600" />
             <h1 className="text-xl md:text-2xl font-bold dark:text-white">
               Chat Criptografado
             </h1>

@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const login = async (email: string, password: string) => {
-    const response = await fetch('http://localhost:5000/login', {
+    const response = await fetch('https://enback.onrender.com/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string, username: string) => {
-    const response = await fetch('http://localhost:5000/register', {
+    const response = await fetch('https://enback.onrender.com/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: { username: string }) => {
     if (!user) throw new Error('Usuário não autenticado');
 
-    const response = await fetch('http://localhost:5000/user/username', {
+    const response = await fetch('https://enback.onrender.com/user/username', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteAccount = async () => {
     if (!user) throw new Error('Usuário não autenticado');
 
-    const response = await fetch('http://localhost:5000/user', {
+    const response = await fetch('https://enback.onrender.com/user', {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${user.token}`,

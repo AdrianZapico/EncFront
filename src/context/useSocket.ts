@@ -6,7 +6,7 @@ const useSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000'); // URL corrigida
+    const newSocket = io('https://enback.onrender.com'); // URL corrigida
     setSocket(newSocket);
 
     return () => {

@@ -20,7 +20,7 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       navigate('/chat');
-    } catch (error) {
+    } catch  {
       setError('Email ou senha inválidos');
     } finally {
       setIsLoading(false);

@@ -5,9 +5,8 @@ import MessageInput from './MessageInput';
 import { encryptMessage, decryptMessage } from '../utils/encryption';
 import { Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
 import Alert from './Alert';
-import ChatList from './ChatList'; // Adicionar a importação do ChatList
+import ChatList from './ChatList';
 
 interface Message {
   id: string;
@@ -38,7 +37,14 @@ const ChatRoom: React.FC = () => {
   useEffect(() => {
     if (!socket || !user) return;
 
-    socket.emit('join', user.username);
+    if (!socket.connected) {
+      socket.connect();
+      socket.emit('join', user.username);
+    }
+
+    socket.on('connect', () => {
+      console.log(`🔵 Usuário conectado: ${socket.id}`);
+    });
 
     socket.on('userJoined', (data: { users: string[] }) => {
       console.log('Usuários online:', data.users);
@@ -51,8 +57,6 @@ const ChatRoom: React.FC = () => {
     });
 
     socket.on('message', (data: Message) => {
-      if (data.from === user.username) return;
-
       if (data.to === user.username) {
         const decryptedMessage = {
           ...data,

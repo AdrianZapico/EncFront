@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import useSocket from '../context/useSocket';
 import ChatMessage from './ChatMessage';
 import MessageInput from './MessageInput';
-import ChatList from './ChatList';
 import { encryptMessage, decryptMessage } from '../utils/encryption';
 import { Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useContacts } from '../context/ContactContext';
+
 import Alert from './Alert';
+import ChatList from './ChatList'; // Adicionar a importação do ChatList
 
 interface Message {
   id: string;
@@ -21,34 +21,19 @@ interface Message {
 
 const ChatRoom: React.FC = () => {
   const { user } = useAuth();
-  const { contacts } = useContacts();
   const socket = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
-  const [unreadMessages, setUnreadMessages] = useState<{ [key: string]: number }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
   const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const notificationSound = useRef<HTMLAudioElement | null>(null);
-  const [selectedChatUsername, setSelectedChatUsername] = useState<string>('');
 
   useEffect(() => {
     notificationSound.current = new Audio('/notification.mp3');
   }, []);
-
-  useEffect(() => {
-    if (selectedChat) {
-      const contact = contacts.find(c => 
-        c.userId.userTag === selectedChat || c.contactId.userTag === selectedChat
-      );
-      if (contact) {
-        const contactInfo = contact.userId.userTag === user?.userTag ? contact.contactId : contact.userId;
-        setSelectedChatUsername(contactInfo.username);
-      }
-    }
-  }, [selectedChat, contacts, user]);
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -73,19 +58,14 @@ const ChatRoom: React.FC = () => {
           ...data,
           message: decryptMessage(data.message)
         };
-        
+
         setMessages(prev => {
           const messageExists = prev.some(msg => msg.id === data.id);
           if (messageExists) return prev;
           return [...prev, decryptedMessage];
         });
-        
+
         if (selectedChat !== data.from) {
-          setUnreadMessages(prev => ({
-            ...prev,
-            [data.from as string]: (prev[data.from as string] || 0) + 1
-          }));
-          
           if (notificationSound.current) {
             notificationSound.current.play().catch(console.error);
           }
@@ -135,15 +115,6 @@ const ChatRoom: React.FC = () => {
     };
   }, [socket, user, selectedChat]);
 
-  useEffect(() => {
-    if (selectedChat) {
-      setUnreadMessages(prev => ({
-        ...prev,
-        [selectedChat as string]: 0
-      }));
-    }
-  }, [selectedChat]);
-
   const handleSendMessage = (message: string) => {
     if (!socket || !user || !selectedChat) {
       setError('Selecione um contato para enviar mensagem');
@@ -173,7 +144,7 @@ const ChatRoom: React.FC = () => {
     };
 
     setMessages(prev => [...prev, newMessage]);
-    
+
     socket.emit('message', {
       ...newMessage,
       message: encryptMessage(message)
@@ -187,24 +158,24 @@ const ChatRoom: React.FC = () => {
 
   const handleEditMessage = (id: string, newMessage: string) => {
     if (!socket || !user || !selectedChat) return;
-    
+
     const encryptedMessage = encryptMessage(newMessage);
-    socket.emit('editMessage', { 
-      id, 
+    socket.emit('editMessage', {
+      id,
       newMessage: encryptedMessage,
-      to: selectedChat 
+      to: selectedChat
     });
   };
 
   const handleDeleteMessage = (id: string) => {
     if (!socket || !user || !selectedChat) return;
-    socket.emit('deleteMessage', { 
+    socket.emit('deleteMessage', {
       messageId: id,
-      to: selectedChat 
+      to: selectedChat
     });
   };
 
-  const filteredMessages = messages.filter(msg => 
+  const filteredMessages = messages.filter(msg =>
     (msg.from === selectedChat && msg.to === user?.userTag) ||
     (msg.from === user?.userTag && msg.to === selectedChat)
   );
@@ -217,7 +188,6 @@ const ChatRoom: React.FC = () => {
         onlineUsers={onlineUsers}
         onSelectChat={setSelectedChat}
         selectedChat={selectedChat}
-        unreadMessages={unreadMessages}
       />
 
       <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
@@ -225,11 +195,11 @@ const ChatRoom: React.FC = () => {
           <div className="flex items-center gap-2">
             <Lock className="w-6 h-6 text-blue-600" />
             <h1 className="text-xl md:text-2xl font-bold dark:text-white">
-              {selectedChat ? `Chat com ${selectedChatUsername}` : 'Selecione um contato'}
+              {selectedChat ? `Chat com ${selectedChat}` : 'Selecione um contato'}
             </h1>
           </div>
         </div>
-        
+
         {error && (
           <Alert
             type="error"
@@ -237,7 +207,7 @@ const ChatRoom: React.FC = () => {
             onClose={() => setError('')}
           />
         )}
-        
+
         <div className="h-[calc(100vh-250px)] md:h-[calc(100vh-200px)] overflow-y-auto mb-4">
           {filteredMessages.map((msg) => (
             <div

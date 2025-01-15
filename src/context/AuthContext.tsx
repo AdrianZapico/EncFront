@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState } from 'react';
 interface User {
   username: string;
   token: string;
-  userTag: string;
+ 
 }
 
 interface AuthContextType {
@@ -41,8 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data = await response.json();
     const userData = {
       username: data.username,
-      token: data.token,
-      userTag: data.userTag
+      token: data.token
     };
     
     setUser(userData);
@@ -66,8 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data = await response.json();
     const userData = {
       username: data.username,
-      token: data.token,
-      userTag: data.userTag
+      token: data.token
     };
     
     setUser(userData);
@@ -99,8 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const responseData = await response.json();
     const updatedUser = {
       ...user,
-      username: responseData.username,
-      userTag: responseData.userTag
+      username: responseData.username
     };
     
     setUser(updatedUser);

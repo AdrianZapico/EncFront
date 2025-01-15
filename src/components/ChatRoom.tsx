@@ -38,22 +38,22 @@ const ChatRoom: React.FC = () => {
   useEffect(() => {
     if (!socket || !user) return;
 
-    socket.emit('join', user.userTag);
+    socket.emit('join', user.username);
 
     socket.on('userJoined', (data: { users: string[] }) => {
       console.log('Usuários online:', data.users);
-      setOnlineUsers(data.users.filter(userTag => userTag !== user.userTag));
+      setOnlineUsers(data.users.filter(username => username !== user.username));
     });
 
     socket.on('userLeft', (data: { users: string[] }) => {
       console.log('Usuário saiu, online:', data.users);
-      setOnlineUsers(data.users.filter(userTag => userTag !== user.userTag));
+      setOnlineUsers(data.users.filter(username => username !== user.username));
     });
 
     socket.on('message', (data: Message) => {
-      if (data.from === user.userTag) return;
+      if (data.from === user.username) return;
 
-      if (data.to === user.userTag) {
+      if (data.to === user.username) {
         const decryptedMessage = {
           ...data,
           message: decryptMessage(data.message)
@@ -138,7 +138,7 @@ const ChatRoom: React.FC = () => {
       username: user.username,
       message: message,
       timestamp: new Date().toISOString(),
-      from: user.userTag,
+      from: user.username,
       to: selectedChat,
       status: 'sent' as const
     };
@@ -176,8 +176,8 @@ const ChatRoom: React.FC = () => {
   };
 
   const filteredMessages = messages.filter(msg =>
-    (msg.from === selectedChat && msg.to === user?.userTag) ||
-    (msg.from === user?.userTag && msg.to === selectedChat)
+    (msg.from === selectedChat && msg.to === user?.username) ||
+    (msg.from === user?.username && msg.to === selectedChat)
   );
 
   if (!user) return null;
@@ -219,7 +219,7 @@ const ChatRoom: React.FC = () => {
                 username={msg.username}
                 message={msg.message}
                 timestamp={msg.timestamp}
-                isCurrentUser={msg.from === user.userTag}
+                isCurrentUser={msg.from === user.username}
                 onEdit={handleEditMessage}
                 onDelete={handleDeleteMessage}
                 status={msg.status}

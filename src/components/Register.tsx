@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from './AuthLayout';
 import Alert from './Alert';
+import PasswordStrengthIndicator, { validatePassword } from './PasswordStrengthIndicator';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,13 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+
+    // Validar senha forte
+    if (!validatePassword(password)) {
+      setError('A senha não atende aos requisitos de segurança. Por favor, verifique os requisitos abaixo.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       await register(name, email, password, username);
@@ -90,6 +98,7 @@ const Register: React.FC = () => {
                 required
                 className="w-full p-3 border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
+              <PasswordStrengthIndicator password={password} />
             </div>
 
             <div>
